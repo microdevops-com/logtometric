@@ -1,0 +1,42 @@
+#- name: log_event_count
+#  action: Count
+#  single_metric: True
+#  labels:
+#    job: logtometric
+#    event: msg_sent_via_http_gw
+#    process_type: worker
+#    process_name: worker_api_request
+#  line_match_regex: "(?P<value>Message [a-zA-Z0-9-]+ will be sent via HTTP_GATEWAY)"
+#  dockers:
+#    - "*nsq_worker_api_request*"
+#
+#- name: executed_by_average_time
+#  action: AvgSum
+#  re_mutate_id: '^(?P<value>.+)-\d+$'
+#  labels:
+#    job: logtometric
+#    process_type: worker
+#  line_match_regex: 'executed by (?P<value>\d+\.\d+) seconds'
+#  dockers:
+#    - "*"
+#
+#- name: log_event_count
+#  action: Count
+#  labels:
+#    job: logparser
+#    event: msg_sent_via_http_gw
+#    process_type: worker
+#    process_name: api_request
+#  line_match_regex: "(?P<value>Message [a-zA-Z0-9-]+ will be sent via HTTP_GATEWAY$)"
+#  paths:
+#    - "/var/log/supervisor/workers/api_request-stderr.log"
+#
+#- name: executed_by_average_time
+#  action: AvgSum
+#  labels:
+#    job: logparser
+#    process_type: worker
+#    re_identifier: '/(?P<process_name>[^/]+)-std...\.log$'
+#  line_match_regex: 'executed by (?P<value>\d+\.\d+) seconds'
+#  paths:
+#    - "/var/log/supervisor/workers/*stderr.log"
