@@ -1,3 +1,7 @@
+#re_mutate_id: regex with capture group named `value`, is used to change the identifier (filename or docker name), which is used to group certain events as belonging to the same calculation action.
+#re_identifier regex with capture group with arbitrary name, is used to replace original identifier with name as key, and value as value at metric dumping step.
+#if used, label name identifier will be absent, and only the captured content (name: value) will be added as labels
+
 #- name: log_event_count
 #  action: Count
 #  single_metric: True
