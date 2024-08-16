@@ -29,7 +29,6 @@ class Base:
         self.log = logging.getLogger(self.__class__.__name__)
         self.running = True
         self.jobs = {}
-        self.blocking = []
 
     async def stop(self):
         self.log.info(f"Stopping the whole {self.__class__.__name__} name {self.name}.")
@@ -282,7 +281,6 @@ class LogEntryHandler(Base):
         try:
             matcher = self.create_matcher()
             mutator = self.create_re_mutate_id()
-            self.blocking.append('consumer')
             self.log.info(f"Started searching '{self.regex}' in '{self.paths}', '{self.dockers}'.")
             regex = re.compile(self.regex)
             while True:

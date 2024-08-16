@@ -58,10 +58,14 @@ class LogItemAvgSum(BaseLogItem):
         self.timere = re.compile(r"(?P<ts>2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})")
 
     def append(self, item):
-        timeline = self.timere.search(item["line"]).group("ts")
-        ts = round(datetime.strptime(timeline, '%Y-%m-%d %H:%M:%S,%f').timestamp()) * 1000
-        item["ts"] = ts
-        self.items.append(item)
+        try:
+            timeline = self.timere.search(item["line"]).group("ts")
+            ts = round(datetime.strptime(timeline, '%Y-%m-%d %H:%M:%S,%f').timestamp()) * 1000
+            item["ts"] = ts
+            self.items.append(item)
+        except Exception as e:
+            self.log.error(f"Exception occured: '{e}'.")
+            return
 
     async def calculate(self):
         await self.defer()
