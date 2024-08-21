@@ -15,7 +15,7 @@ from collections import defaultdict
 from threading import Thread
 
 from queuey import Queuey
-from loghandlers import LogItemCount, LogItemAvgSum
+from loghandlers import LogItemCount, LogItemAvg, LogItemAvgSumStdev
 
 try:
     import docker
@@ -241,7 +241,7 @@ class LogEntryHandler(Base):
         self.url = "http://127.0.0.1:8429/api/v1/import"
         if not self.labels.get("hostname"):
             self.labels.update({"hostname": socket.gethostname()})
-        self.actions = {"Count": LogItemCount, "AvgSum": LogItemAvgSum}
+        self.actions = {"Count": LogItemCount, "Avg": LogItemAvg, "AvgSumStdev": LogItemAvgSumStdev}
         self.data = defaultdict(self.actions[config["action"]])
 
     def create_matcher(self):
