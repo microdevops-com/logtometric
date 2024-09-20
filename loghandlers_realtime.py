@@ -35,79 +35,50 @@ class BaseLogItem:
         self.timestamps.clear()
         self.values.clear()
 
+
 class LogItemCount(BaseLogItem):
     def __init__(self):
         super().__init__()
 
     async def calculate(self):
         await self.defer()
+        self.timestamps.append(round(time.time()) * 1000)
         if self.items:
             self.last_value += len(self.items)
             self.values.append(self.last_value)
-            ts = round(time.time()) * 1000
-            self.timestamps.append(ts)
             self.items.clear()
         else:
             self.values.append(self.last_value)
-            self.timestamps.append(round(time.time())*1000)
 
 
 class LogItemAvg(BaseLogItem):
     def __init__(self):
         super().__init__()
-        self.timere = re.compile(r"(?P<ts>2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})")
-
-    def append(self, item):
-        try:
-            timeline = self.timere.search(item["line"]).group("ts")
-            ts = round(datetime.strptime(timeline, '%Y-%m-%d %H:%M:%S,%f').timestamp()) * 1000
-            item["ts"] = ts
-            self.items.append(item)
-        except Exception as e:
-            self.log.error(f"Exception occured: '{e}'.")
-            return
 
     async def calculate(self):
         await self.defer()
+        self.timestamps.append(round(time.time()) * 1000)
         if self.items:
-            for ts, grp in groupby(self.items, key=lambda x: x["ts"]):
-                grp = [*grp]
-                ts = round(time.time()) * 1000
-                values = [float(i["value"]) for i in grp]
-                self.last_value += fmean(values)
-                self.values.append(self.last_value)
-                self.timestamps.append(ts)
+            values = [float(item["value"]) for item in self.items]
+            self.last_value += fmean(values)
+            self.values.append(self.last_value)
             self.items.clear()
         else:
             self.values.append(self.last_value)
-            self.timestamps.append(round(time.time())*1000)
+
 
 class LogItemAvgSumStdev(BaseLogItem):
     def __init__(self):
         super().__init__()
         self.timere = re.compile(r"(?P<ts>2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})")
 
-    def append(self, item):
-        try:
-            timeline = self.timere.search(item["line"]).group("ts")
-            ts = round(datetime.strptime(timeline, '%Y-%m-%d %H:%M:%S,%f').timestamp()) * 1000
-            item["ts"] = ts
-            self.items.append(item)
-        except Exception as e:
-            self.log.error(f"Exception occured: '{e}'.")
-            return
-
     async def calculate(self):
         await self.defer()
+        self.timestamps.append(round(time.time()) * 1000)
         if self.items:
-            for ts, grp in groupby(self.items, key=lambda x: x["ts"]):
-                grp = [*grp]
-                ts = round(time.time()) * 1000
-                values = [float(i["value"]) for i in grp]
-                self.last_value += pstdev(values) + fmean(values)
-                self.values.append(self.last_value)
-                self.timestamps.append(ts)
+            values = [float(item["value"]) for item in self.items]
+            self.last_value += fmean(values) + pstdev(values)
+            self.values.append(self.last_value)
             self.items.clear()
         else:
             self.values.append(self.last_value)
-            self.timestamps.append(round(time.time())*1000)

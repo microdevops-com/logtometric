@@ -15,7 +15,7 @@ from collections import defaultdict
 from threading import Thread
 
 from queuey import Queuey
-from loghandlers import LogItemCount, LogItemAvg, LogItemAvgSumStdev
+from loghandlers_realtime import LogItemCount, LogItemAvg, LogItemAvgSumStdev
 
 try:
     import docker
