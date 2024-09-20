@@ -49,18 +49,28 @@ class LogFollower(Base):
 
         self.filemetalock = asyncio.Semaphore()
 
+
     async def initialize_docker_client(self):
         init_retry_delay = 60
-        for i in range(0, 100):
+        tries = 1
+        tries_limit = 1000
+        while True:
+            if tries > tries_limit:
+                self.log.error(f"Could not initialize docker client after {tries} tries. Aborting.")
+                return False
             try:
-                self.log.info(f"Initializing docker client. Try number: {i}. Retry delay {init_retry_delay}s")
+                self.log.info(f"Initializing docker client. Try number: {tries}. Retry limit: {tries_limit}. Retry delay {init_retry_delay}s")
                 self.docker_client = docker.from_env()
-                self.log.info(f"Initialized docker client succesfully. Try nubmer {i}.")
-                break
+                if self.docker_client is None:
+                    self.log.error(f"Docker package is not present. Aborting.")
+                    return False
+                self.log.info(f"Initialized docker client succesfully. Try nubmer {tries}.")
+                return True
             except Exception as e:
-                self.log.warning(f"Initializing docker client failed. Try number: {i}. Retry delay {init_retry_delay}s. Exception occured: {e}")
-                self.docker_client = None
+                self.log.warning(f"Initializing docker client failed. Try number: {tries}. Retry delay {init_retry_delay}s. Exception occured: {e}")
             await asyncio.sleep(init_retry_delay)
+            tries += 1
+
 
     @staticmethod
     def _create_filemeta():
@@ -151,7 +161,7 @@ class LogFollower(Base):
                     meta["task"].cancel()
             except AttributeError:
                 pass
-            self.log.info(f"File followers watcher job stopped. All followers cancelled.")
+            self.log.info(f"File followers watcher job stopped due to task cancellation. All followers cancelled.")
             return
 
     async def watch_paths_glob(self):
@@ -170,7 +180,6 @@ class LogFollower(Base):
 
 
     async def watch_dockers_glob(self):
-        await self.initialize_docker_client()
         try:
             delay = 60
             err_delay = 1
@@ -179,10 +188,19 @@ class LogFollower(Base):
             while True:
                 try:
                     all_containers = {c.name: c.id for c in self.docker_client.containers.list()}
+                except (AttributeError, requests.exceptions.ConnectionError) as e:
+                    self.log.info(f"Exception occured: {e}. Creating new docker client.")
+                    if not await self.initialize_docker_client():
+                        self.log.error(f"Docker glob checker stopped due to unavailable docker client.")
+                        return
+                    continue
                 except docker.errors.NotFound as e:
                     self.log.warning(f"Docker api error occured during api call. Retry in '{err_delay}s'. Error: '{e}'.")
                     await asyncio.sleep(err_delay)
                     continue
+                except Exception as e:
+                    self.log.error(f"Exeption occured: {e}. Docker glob checker stopped due to an unknown error.")
+                    return
                 for names, qs in self.dockersglobmeta.items():
                     containers = []
                     for name in names:
@@ -193,7 +211,9 @@ class LogFollower(Base):
                         self._updatefilemeta(file, qs, container)
                 await asyncio.sleep(delay)
         except asyncio.exceptions.CancelledError:
+            self.log.info(f"Docker glob checker stopped due to task cancellation.")
             return
+
 
     async def add_watch_paths(self, meta, q):
         if q not in self.filesglobmeta[meta]:
