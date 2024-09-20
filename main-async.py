@@ -46,13 +46,21 @@ class LogFollower(Base):
         self.dockersglobmeta = defaultdict(list)
         self.filesglobmeta = defaultdict(list)
         self.filemeta = defaultdict(self._create_filemeta)
-        try:
-            self.docker_client = docker.from_env()
-        except Exception as e:
-            self.log.warning(f"Could not initialize docker. Exception occured: {e}")
-            self.docker_client = None
 
         self.filemetalock = asyncio.Semaphore()
+
+    async def initialize_docker_client(self):
+        init_retry_delay = 60
+        for i in range(0, 100):
+            try:
+                self.log.info(f"Initializing docker client. Try number: {i}. Retry delay {init_retry_delay}s")
+                self.docker_client = docker.from_env()
+                self.log.info(f"Initialized docker client succesfully. Try nubmer {i}.")
+                break
+            except Exception as e:
+                self.log.warning(f"Initializing docker client failed. Try number: {i}. Retry delay {init_retry_delay}s. Exception occured: {e}")
+                self.docker_client = None
+            await asyncio.sleep(init_retry_delay)
 
     @staticmethod
     def _create_filemeta():
@@ -160,7 +168,9 @@ class LogFollower(Base):
         except asyncio.exceptions.CancelledError:
             return
 
+
     async def watch_dockers_glob(self):
+        await self.initialize_docker_client()
         try:
             delay = 60
             err_delay = 1
@@ -194,8 +204,6 @@ class LogFollower(Base):
             self.jobs['watch_followers'] = asyncio.create_task(self.watch_followers())
 
     async def add_watch_dockers(self, meta, q):
-        if self.docker_client is None:
-            return
         if q not in self.dockersglobmeta[meta]:
             self.dockersglobmeta[meta].append(q)
         if not self.jobs.get('watch_dockers_glob', False):
